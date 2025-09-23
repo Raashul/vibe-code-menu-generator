@@ -1,0 +1,40 @@
+sequenceDiagram
+    participant User
+    participant Frontend as React Frontend
+    participant WebSocket as WebSocket Connection
+    participant Backend as Node.js Backend
+    participant OCR as OCR Service
+    participant LLM as LLM Service
+    participant ImageGen as Image Generation Service
+
+    User->>Frontend: Upload/Take photo of menu
+    Frontend->>WebSocket: Establish connection
+    Frontend->>Backend: POST /api/translate (image file + socketId)
+    Backend->>Frontend: HTTP 202 Accepted (processing started)
+    
+    Backend->>OCR: Extract text from image
+    OCR-->>Backend: Raw menu text
+    Backend->>WebSocket: Emit 'ocr_complete' with extracted text
+    WebSocket-->>Frontend: OCR results
+    Frontend-->>User: Show extracted text preview
+    
+    Backend->>LLM: Parse menu items and translate
+    LLM-->>Backend: Structured menu data (translated)
+    Backend->>WebSocket: Emit 'translation_complete' with menu items
+    WebSocket-->>Frontend: Translation results
+    Frontend-->>User: Show translated menu items (no images yet)
+    
+    Backend->>ImageGen: Generate food image (single shared image)
+    ImageGen-->>Backend: Generated image URL
+    Backend->>WebSocket: Emit 'image_generated' with image URL
+    WebSocket-->>Frontend: Image URL
+    Frontend-->>User: Update all menu items with generated image
+    
+    Backend->>WebSocket: Emit 'processing_complete'
+    WebSocket-->>Frontend: Final completion status
+    Frontend-->>User: Final translated menu with photos
+    
+    Note over User,ImageGen: Real-time processing:
+    Note over Frontend,WebSocket: Live progress updates
+    Note over Backend,WebSocket: Stream results as they complete
+    Note over Frontend,User: Progressive UI updates

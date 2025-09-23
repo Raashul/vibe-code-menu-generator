@@ -1,0 +1,424 @@
+{
+  "info": {
+    "name": "Menu Translation API",
+    "description": "API endpoints for menu translation web app with OCR and LLM integration",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3001",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/health",
+          "host": ["{{baseUrl}}"],
+          "path": ["health"]
+        },
+        "description": "Check if the backend server is running"
+      },
+      "response": [
+        {
+          "name": "Health Check Success",
+          "originalRequest": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "cookie": [],
+          "body": "{\n  \"status\": \"OK\",\n  \"timestamp\": \"2024-01-15T10:30:00.000Z\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "Translate Menu - Basic",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "multipart/form-data",
+            "type": "text",
+            "disabled": true
+          }
+        ],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "image",
+              "type": "file",
+              "src": [],
+              "description": "Upload a menu image (JPEG, PNG, or WebP)"
+            },
+            {
+              "key": "targetLanguage",
+              "value": "English",
+              "type": "text",
+              "description": "Target language for translation"
+            },
+            {
+              "key": "generateImages",
+              "value": "true",
+              "type": "text",
+              "description": "Whether to generate food images"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/translate",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "translate"]
+        },
+        "description": "Upload a menu image and get translated menu items"
+      },
+      "response": [
+        {
+          "name": "Translation Success",
+          "originalRequest": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": []
+                },
+                {
+                  "key": "targetLanguage",
+                  "value": "English",
+                  "type": "text"
+                },
+                {
+                  "key": "generateImages",
+                  "value": "true",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/translate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "translate"]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "cookie": [],
+          "body": "{\n  \"success\": true,\n  \"originalText\": \"Extracted text from menu image\",\n  \"translatedMenu\": [\n    {\n      \"name\": \"Grilled Chicken\",\n      \"originalName\": \"Pollo a la Plancha\",\n      \"description\": \"Tender grilled chicken breast with herbs\",\n      \"price\": \"$15.99\",\n      \"category\": \"Main Courses\",\n      \"imageUrl\": \"https://oaidalleapiprodscus.blob.core.windows.net/private/org-xxx/dalle-generated-image.png\"\n    }\n  ],\n  \"sourceLanguage\": \"Spanish\",\n  \"targetLanguage\": \"English\",\n  \"confidence\": 85.5,\n  \"processingTime\": 12500\n}"
+        }
+      ]
+    },
+    {
+      "name": "Translate Menu - Spanish",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "image",
+              "type": "file",
+              "src": [],
+              "description": "Upload a menu image"
+            },
+            {
+              "key": "targetLanguage",
+              "value": "Spanish",
+              "type": "text"
+            },
+            {
+              "key": "generateImages",
+              "value": "false",
+              "type": "text"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/translate",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "translate"]
+        },
+        "description": "Translate menu to Spanish without generating images"
+      }
+    },
+    {
+      "name": "Translate Menu - French",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "image",
+              "type": "file",
+              "src": [],
+              "description": "Upload a menu image"
+            },
+            {
+              "key": "targetLanguage",
+              "value": "French",
+              "type": "text"
+            },
+            {
+              "key": "generateImages",
+              "value": "true",
+              "type": "text"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/translate",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "translate"]
+        },
+        "description": "Translate menu to French with image generation"
+      }
+    },
+    {
+      "name": "Error - No Image",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "targetLanguage",
+              "value": "English",
+              "type": "text"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/translate",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "translate"]
+        },
+        "description": "Test error handling when no image is provided"
+      },
+      "response": [
+        {
+          "name": "No Image Error",
+          "originalRequest": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "targetLanguage",
+                  "value": "English",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/translate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "translate"]
+            }
+          },
+          "status": "Bad Request",
+          "code": 400,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "cookie": [],
+          "body": "{\n  \"success\": false,\n  \"error\": \"Image file is required\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "Error - Invalid File Type",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "image",
+              "type": "file",
+              "src": [],
+              "description": "Upload a non-image file (e.g., .txt, .pdf)"
+            },
+            {
+              "key": "targetLanguage",
+              "value": "English",
+              "type": "text"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/translate",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "translate"]
+        },
+        "description": "Test error handling for invalid file types"
+      },
+      "response": [
+        {
+          "name": "Invalid File Type Error",
+          "originalRequest": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": []
+                },
+                {
+                  "key": "targetLanguage",
+                  "value": "English",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/translate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "translate"]
+            }
+          },
+          "status": "Bad Request",
+          "code": 400,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "cookie": [],
+          "body": "{\n  \"success\": false,\n  \"error\": \"Invalid file type. Only JPEG, PNG, and WebP images are allowed\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "Error - Route Not Found",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/nonexistent",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "nonexistent"]
+        },
+        "description": "Test 404 error handling"
+      },
+      "response": [
+        {
+          "name": "Route Not Found",
+          "originalRequest": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/nonexistent",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "nonexistent"]
+            }
+          },
+          "status": "Not Found",
+          "code": 404,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "cookie": [],
+          "body": "{\n  \"success\": false,\n  \"error\": \"Route /api/nonexistent not found\"\n}"
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Set dynamic timestamp for requests",
+          "pm.globals.set('timestamp', new Date().toISOString());"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Basic response validation",
+          "pm.test('Response time is less than 30s', function () {",
+          "    pm.expect(pm.response.responseTime).to.be.below(30000);",
+          "});",
+          "",
+          "pm.test('Response has proper Content-Type', function () {",
+          "    pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+          "});",
+          "",
+          "// Validate successful translation responses",
+          "if (pm.response.code === 200 && pm.request.url.path.includes('translate')) {",
+          "    pm.test('Translation response has required fields', function () {",
+          "        const jsonData = pm.response.json();",
+          "        pm.expect(jsonData).to.have.property('success');",
+          "        pm.expect(jsonData).to.have.property('originalText');",
+          "        pm.expect(jsonData).to.have.property('translatedMenu');",
+          "        pm.expect(jsonData).to.have.property('processingTime');",
+          "    });",
+          "}",
+          "",
+          "// Validate error responses",
+          "if (pm.response.code >= 400) {",
+          "    pm.test('Error response has proper structure', function () {",
+          "        const jsonData = pm.response.json();",
+          "        pm.expect(jsonData).to.have.property('success', false);",
+          "        pm.expect(jsonData).to.have.property('error');",
+          "    });",
+          "}"
+        ]
+      }
+    }
+  ]
+}
