@@ -12,6 +12,12 @@ export const validateTranslationRequest = [
     .optional()
     .isBoolean()
     .withMessage('generateImages must be a boolean value'),
+  
+  body('socketId')
+    .notEmpty()
+    .isString()
+    .isLength({ min: 1, max: 100 })
+    .withMessage('socketId is required and must be a string'),
 
   (req: Request, res: Response, next: NextFunction) => {
     const errors = validationResult(req);

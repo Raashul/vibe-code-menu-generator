@@ -83,6 +83,12 @@
               "value": "true",
               "type": "text",
               "description": "Whether to generate food images"
+            },
+            {
+              "key": "socketId",
+              "value": "test-socket-123",
+              "type": "text",
+              "description": "WebSocket room ID for real-time updates (REQUIRED)"
             }
           ]
         },
@@ -125,8 +131,8 @@
               "path": ["api", "translate"]
             }
           },
-          "status": "OK",
-          "code": 200,
+          "status": "Accepted",
+          "code": 202,
           "_postman_previewlanguage": "json",
           "header": [
             {
@@ -135,7 +141,7 @@
             }
           ],
           "cookie": [],
-          "body": "{\n  \"success\": true,\n  \"originalText\": \"Extracted text from menu image\",\n  \"translatedMenu\": [\n    {\n      \"name\": \"Grilled Chicken\",\n      \"originalName\": \"Pollo a la Plancha\",\n      \"description\": \"Tender grilled chicken breast with herbs\",\n      \"price\": \"$15.99\",\n      \"category\": \"Main Courses\",\n      \"imageUrl\": \"https://oaidalleapiprodscus.blob.core.windows.net/private/org-xxx/dalle-generated-image.png\"\n    }\n  ],\n  \"sourceLanguage\": \"Spanish\",\n  \"targetLanguage\": \"English\",\n  \"confidence\": 85.5,\n  \"processingTime\": 12500\n}"
+          "body": "{\n  \"success\": true,\n  \"message\": \"Processing started\",\n  \"socketId\": \"test-socket-123\",\n  \"status\": \"processing\"\n}"
         }
       ]
     },
@@ -161,6 +167,11 @@
             {
               "key": "generateImages",
               "value": "false",
+              "type": "text"
+            },
+            {
+              "key": "socketId",
+              "value": "spanish-test-456",
               "type": "text"
             }
           ]
@@ -195,6 +206,11 @@
             {
               "key": "generateImages",
               "value": "true",
+              "type": "text"
+            },
+            {
+              "key": "socketId",
+              "value": "french-test-789",
               "type": "text"
             }
           ]

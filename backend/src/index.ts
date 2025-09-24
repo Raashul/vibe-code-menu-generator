@@ -2,16 +2,29 @@ import express from 'express';
 import cors from 'cors';
 import multer from 'multer';
 import dotenv from 'dotenv';
+import { createServer } from 'http';
 import { errorHandler, notFoundHandler, asyncHandler } from './middleware/errorHandler';
 import { validateTranslationRequest, validateImageFile } from './middleware/validation';
 import { ocrService } from './services/ocrService';
 import { llmService } from './services/llmService';
 import { imageGenService } from './services/imageGenService';
+import { websocketService } from './services/websocketService';
+import { MenuProcessor } from './services/menuProcessor';
+import { imageCacheService } from './services/imageCacheService';
 
 dotenv.config();
 
 const app = express();
+const httpServer = createServer(app);
 const PORT = process.env.PORT || 3001;
+
+// Initialize WebSocket service
+websocketService.initialize(httpServer);
+
+// Initialize Redis cache service
+imageCacheService.initialize().catch(error => {
+  console.warn('Failed to initialize Redis cache service:', error);
+});
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -35,6 +48,92 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+app.get('/', (req, res) => {
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Menu Translation WebSocket Test</title>
+      <script src="/socket.io/socket.io.js"></script>
+    </head>
+    <body>
+      <h1>Menu Translation WebSocket Test</h1>
+      <div id="status">Connecting...</div>
+      <div id="events"></div>
+      
+      <script>
+        const socket = io();
+        const status = document.getElementById('status');
+        const events = document.getElementById('events');
+        
+        function addEvent(type, data) {
+          const div = document.createElement('div');
+          div.innerHTML = '<strong>' + type + ':</strong> ' + JSON.stringify(data, null, 2);
+          div.style.marginBottom = '10px';
+          div.style.padding = '10px';
+          div.style.backgroundColor = '#f0f0f0';
+          events.appendChild(div);
+        }
+        
+        socket.on('connect', () => {
+          status.textContent = 'Connected! Socket ID: ' + socket.id;
+          addEvent('Connected', { socketId: socket.id });
+          
+          // Join a test room
+          socket.emit('join_room', 'test-socket-123');
+        });
+        
+        socket.on('room_joined', (data) => {
+          addEvent('Room Joined', data);
+        });
+        
+        socket.on('ocr_started', () => {
+          addEvent('OCR Started', {});
+        });
+        
+        socket.on('ocr_complete', (data) => {
+          addEvent('OCR Complete', data);
+        });
+        
+        socket.on('translation_started', () => {
+          addEvent('Translation Started', {});
+        });
+        
+        socket.on('translation_complete', (data) => {
+          addEvent('Translation Complete', data);
+        });
+        
+        socket.on('image_generation_started', () => {
+          addEvent('Image Generation Started', {});
+        });
+        
+        socket.on('image_generated', (data) => {
+          const progressText = data.progress ? \`(\${data.progress.current}/\${data.progress.total}-\${data.progress.percentage}%)\` : '';
+          const fallbackText = data.fallback ? '[FALLBACK]' : '';
+          addEvent('Image Generated ' + progressText + fallbackText, data);
+        });
+        
+        socket.on('processing_complete', (data) => {
+          addEvent('Processing Complete', data);
+        });
+        
+        socket.on('disconnect', () => {
+          status.textContent = 'Disconnected';
+          addEvent('Disconnected', {});
+        });
+        
+        // Handle all error events
+        ['ocr_error', 'translation_error', 'image_generation_error', 'processing_error'].forEach(event => {
+          socket.on(event, (data) => {
+            addEvent('ERROR - ' + event, data);
+          });
+        });
+      </script>
+    </body>
+    </html>
+  `);
+});
+
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
@@ -44,8 +143,6 @@ app.post('/api/translate',
   validateImageFile,
   validateTranslationRequest,
   asyncHandler(async (req: express.Request, res: express.Response) => {
-  const startTime = Date.now();
-  
   try {
     if (!req.file) {
       return res.status(400).json({
@@ -54,92 +151,30 @@ app.post('/api/translate',
       });
     }
 
-    const { targetLanguage = 'English', generateImages = true } = req.body;
+    const { targetLanguage = 'English', generateImages = true, socketId } = req.body;
 
-    // Extract text from image using OCR
-    const ocrResult = await ocrService.extractText(req.file.buffer, req.file.mimetype);
-    
-    if (!ocrResult.text || ocrResult.text.length < 10) {
-      return res.status(400).json({
-        success: false,
-        error: 'Unable to extract readable text from image',
-        confidence: ocrResult.confidence,
-        processingTime: Date.now() - startTime,
-      });
-    }
-
-    // Translate menu using LLM
-    const llmResult = await llmService.retryTranslation(ocrResult.text, targetLanguage);
-    
-    // Generate images for menu items if requested
-    let menuWithImages = llmResult.translatedMenu;
-    
-    if (generateImages && llmResult.translatedMenu.length > 0) {
-      try {
-        console.log(`Generating one shared image for ${llmResult.translatedMenu.length} menu items...`);
-        
-        // TODO: For production, generate individual images for each menu item using imageGenService.generateBatchImages()
-        // For testing, generate one image and reuse it across all items to save API costs and time
-        const firstItem = llmResult.translatedMenu[0];
-        const singleImageResult = await imageGenService.generateWithFallback(firstItem);
-        
-        // Apply the same image URL to all menu items
-        menuWithImages = llmResult.translatedMenu.map(item => ({
-          ...item,
-          imageUrl: singleImageResult.imageUrl
-        }));
-        
-        console.log(`Single image generation completed for all ${llmResult.translatedMenu.length} items`);
-      } catch (error) {
-        console.error('Image generation failed:', error);
-        // Fallback to placeholder images
-        menuWithImages = llmResult.translatedMenu.map(item => ({
-          ...item,
-          imageUrl: `https://via.placeholder.com/400x400/f0f0f0/333333?text=${encodeURIComponent(item.name)}`
-        }));
-      }
-    }
-
-    const response = {
+    // Return immediate response - processing will continue in background
+    res.status(202).json({
       success: true,
-      originalText: ocrResult.text,
-      translatedMenu: menuWithImages,
-      sourceLanguage: llmResult.sourceLanguage,
-      targetLanguage: llmResult.targetLanguage,
-      confidence: ocrResult.confidence,
-      processingTime: Date.now() - startTime,
-    };
+      message: 'Processing started',
+      socketId,
+      status: 'processing'
+    });
 
-    res.json(response);
+    // Start async processing
+    MenuProcessor.processMenuAsync({
+      imageBuffer: req.file.buffer,
+      mimetype: req.file.mimetype,
+      targetLanguage,
+      generateImages: generateImages === 'true' || generateImages === true,
+      socketId,
+    });
+
   } catch (error) {
-    console.error('Translation error:', error);
-    
-    let errorMessage = 'Failed to process image';
-    let statusCode = 500;
-    
-    if (error instanceof Error) {
-      if (error.message.includes('OCR') || error.message.includes('extract text')) {
-        errorMessage = 'Failed to extract text from image. Please ensure the image contains clear, readable text.';
-        statusCode = 400;
-      } else if (error.message.includes('initialization')) {
-        errorMessage = 'Service initialization failed. Please try again.';
-        statusCode = 503;
-      } else if (error.message.includes('OPENAI_API_KEY')) {
-        errorMessage = 'Translation service not configured. Please contact support.';
-        statusCode = 503;
-      } else if (error.message.includes('translate') || error.message.includes('LLM')) {
-        errorMessage = 'Failed to translate menu. Please try again.';
-        statusCode = 500;
-      } else if (error.message.includes('image generation')) {
-        errorMessage = 'Translation succeeded but image generation failed. Menu returned without images.';
-        statusCode = 200; // Partial success
-      }
-    }
-    
-    res.status(statusCode).json({
+    console.error('Failed to start processing:', error);
+    res.status(500).json({
       success: false,
-      error: errorMessage,
-      processingTime: Date.now() - startTime,
+      error: 'Failed to start processing',
     });
   }
 }));
@@ -147,6 +182,7 @@ app.post('/api/translate',
 app.use(notFoundHandler);
 app.use(errorHandler);
 
-app.listen(PORT, () => {
+httpServer.listen(PORT, () => {
   console.log(`Backend server running on port ${PORT}`);
+  console.log(`WebSocket server ready on ws://localhost:${PORT}`);
 });
