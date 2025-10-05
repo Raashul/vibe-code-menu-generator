@@ -1,0 +1,4 @@
+[] FIX UI Design
+[] Deploy UI and backend in vercel
+[] Add Readme
+

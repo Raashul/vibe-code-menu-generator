@@ -78,11 +78,20 @@ export class ImageCacheService {
         if (cachedData) {
           const parsed = JSON.parse(cachedData) as CachedImage;
           parsed.generatedAt = new Date(parsed.generatedAt); // Parse date
-          console.log(`Redis cache HIT for: ${itemName}`);
           
-          // Also update memory cache for faster access
-          this.memoryCache.set(cacheKey, parsed);
-          return parsed;
+          // Validate URL is still accessible (for DALL-E URLs that expire)
+          if (await this.validateImageUrl(parsed.imageUrl)) {
+            console.log(`Redis cache HIT for: ${itemName}`);
+            // Also update memory cache for faster access
+            this.memoryCache.set(cacheKey, parsed);
+            return parsed;
+          } else {
+            console.log(`Redis cache EXPIRED URL for: ${itemName}, removing from cache`);
+            // Remove expired URL from cache
+            await this.redisClient.del(cacheKey);
+            this.memoryCache.delete(cacheKey);
+            return null;
+          }
         }
       } catch (error) {
         console.warn('Redis get error:', error);
@@ -99,11 +108,42 @@ export class ImageCacheService {
         return null;
       }
       
-      console.log(`Memory cache HIT for: ${itemName}`);
-      return memoryCache;
+      // Validate URL is still accessible
+      if (await this.validateImageUrl(memoryCache.imageUrl)) {
+        console.log(`Memory cache HIT for: ${itemName}`);
+        return memoryCache;
+      } else {
+        console.log(`Memory cache EXPIRED URL for: ${itemName}, removing from cache`);
+        this.memoryCache.delete(cacheKey);
+        return null;
+      }
     }
 
     return null;
+  }
+
+  private async validateImageUrl(url: string): Promise<boolean> {
+    try {
+      // Skip validation for known permanent URLs (Unsplash, placeholders, etc.)
+      if (url.includes('unsplash.com') || url.includes('placeholder.com') || url.includes('via.placeholder.com')) {
+        return true;
+      }
+      
+      // For DALL-E URLs, do a lightweight HEAD request to check if they're still valid
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      
+      const response = await fetch(url, { 
+        method: 'HEAD',
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      return response.ok;
+    } catch (error) {
+      console.warn(`URL validation failed for ${url}:`, error);
+      return false;
+    }
   }
 
   async setCachedImage(itemName: string, description: string, imageUrl: string): Promise<void> {
@@ -177,13 +217,41 @@ export class ImageCacheService {
 
   // Semantic matching for common foods
   private commonFoodImages = new Map([
+    // Specific chicken dishes
+    ['chili chicken', 'https://images.unsplash.com/photo-1606491956689-2ea866880c84?w=400'],
+    ['chicken 65', 'https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?w=400'],
+    ['chicken choila', 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=400'],
+    ['chicken tikka', 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400'],
+    ['chicken curry', 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400'],
+    ['chicken biryani', 'https://images.unsplash.com/photo-1563379091339-03246963d96c?w=400'],
+    ['chicken wings', 'https://images.unsplash.com/photo-1527477396000-e27163b481c2?w=400'],
+    ['butter chicken', 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400'],
+    
+    // Sushi items
+    ['naruto roll', 'https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?w=400'],
+    ['california roll', 'https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?w=400'],
+    ['salmon roll', 'https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?w=400'],
+    ['tuna roll', 'https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?w=400'],
+    ['sushi roll', 'https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?w=400'],
+    ['sushi', 'https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?w=400'],
+    ['roll', 'https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?w=400'],
+    
+    // Burgers
+    ['chicken burger', 'https://images.unsplash.com/photo-1571091718767-18b5b1457add?w=400'],
+    ['beef burger', 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400'],
+    ['veggie burger', 'https://images.unsplash.com/photo-1525059696034-4967a729002e?w=400'],
+    ['beyond burger', 'https://images.unsplash.com/photo-1525059696034-4967a729002e?w=400'],
+    ['salmon burger', 'https://images.unsplash.com/photo-1544943910-4c1dc44aab44?w=400'],
+    ['fish burger', 'https://images.unsplash.com/photo-1544943910-4c1dc44aab44?w=400'],
+    ['burger', 'https://images.unsplash.com/photo-1571091718767-18b5b1457add?w=400'],
+    
+    // General foods (as last resort)
     ['chicken', 'https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?w=400'],
     ['beef', 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400'],
     ['pasta', 'https://images.unsplash.com/photo-1551183053-bf91a1d81141?w=400'],
     ['pizza', 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=400'],
     ['salad', 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=400'],
     ['soup', 'https://images.unsplash.com/photo-1547592180-85f173990554?w=400'],
-    ['burger', 'https://images.unsplash.com/photo-1571091718767-18b5b1457add?w=400'],
     ['fish', 'https://images.unsplash.com/photo-1544943910-4c1dc44aab44?w=400'],
     ['dessert', 'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=400'],
     ['drink', 'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=400']
@@ -192,11 +260,16 @@ export class ImageCacheService {
   getFallbackImage(itemName: string): string | null {
     const normalizedName = itemName.toLowerCase();
     
-    // Check for keyword matches
-    for (const [keyword, imageUrl] of this.commonFoodImages) {
+    // Sort keywords by length (descending) to prioritize more specific matches
+    const sortedKeywords = Array.from(this.commonFoodImages.keys())
+      .sort((a, b) => b.length - a.length);
+    
+    // Check for keyword matches, starting with most specific
+    for (const keyword of sortedKeywords) {
       if (normalizedName.includes(keyword)) {
+        const imageUrl = this.commonFoodImages.get(keyword);
         console.log(`Using fallback image for ${itemName} (matched: ${keyword})`);
-        return imageUrl;
+        return imageUrl!;
       }
     }
 

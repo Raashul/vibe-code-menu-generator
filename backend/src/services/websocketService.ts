@@ -2,6 +2,7 @@ import { Server } from 'socket.io';
 import { Server as HttpServer } from 'http';
 import { 
   WebSocketEvents, 
+  SubStepProgressData,
   OCRCompleteData, 
   TranslationCompleteData, 
   ImageGeneratedData, 
@@ -87,6 +88,10 @@ export class WebSocketService {
     this.io?.to(socketId).emit('ocr_started');
   }
 
+  emitOCRProgress(socketId: string, data: SubStepProgressData): void {
+    this.io?.to(socketId).emit('ocr_progress', data);
+  }
+
   emitOCRComplete(socketId: string, data: OCRCompleteData): void {
     this.io?.to(socketId).emit('ocr_complete', data);
   }
@@ -100,6 +105,10 @@ export class WebSocketService {
     this.io?.to(socketId).emit('translation_started');
   }
 
+  emitTranslationProgress(socketId: string, data: SubStepProgressData): void {
+    this.io?.to(socketId).emit('translation_progress', data);
+  }
+
   emitTranslationComplete(socketId: string, data: TranslationCompleteData): void {
     this.io?.to(socketId).emit('translation_complete', data);
   }
@@ -111,6 +120,10 @@ export class WebSocketService {
   // Image Generation Events
   emitImageGenerationStarted(socketId: string): void {
     this.io?.to(socketId).emit('image_generation_started');
+  }
+
+  emitImageGenerationProgress(socketId: string, data: SubStepProgressData): void {
+    this.io?.to(socketId).emit('image_generation_progress', data);
   }
 
   emitImageGenerated(socketId: string, data: ImageGeneratedData): void {

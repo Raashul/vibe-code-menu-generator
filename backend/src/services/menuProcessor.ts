@@ -25,6 +25,12 @@ export class MenuProcessor {
       const ocrStartTime = Date.now();
       
       try {
+        // Sub-step: Reading image
+        websocketService.emitOCRProgress(socketId, {
+          step: 'reading_image',
+          message: '📖 Reading menu image...'
+        });
+        
         const ocrResult = await ocrService.extractText(imageBuffer, mimetype);
         ocrTime = Date.now() - ocrStartTime;
         
@@ -44,6 +50,18 @@ export class MenuProcessor {
         const translationStartTime = Date.now();
         
         try {
+          // Sub-step: Analyzing menu structure
+          websocketService.emitTranslationProgress(socketId, {
+            step: 'analyzing_menu',
+            message: '🤖 Analyzing menu structure...'
+          });
+          
+          // Sub-step: Translating content
+          websocketService.emitTranslationProgress(socketId, {
+            step: 'translating_content',
+            message: '🌍 Translating menu items...'
+          });
+          
           const llmResult = await llmService.retryTranslation(ocrResult.text, targetLanguage);
           translationTime = Date.now() - translationStartTime;
           
@@ -58,6 +76,17 @@ export class MenuProcessor {
           if (generateImages && llmResult.translatedMenu.length > 0) {
             websocketService.emitImageGenerationStarted(socketId);
             const imageGenStartTime = Date.now();
+            
+            // Sub-step: Preparing image generation
+            websocketService.emitImageGenerationProgress(socketId, {
+              step: 'preparing_generation',
+              message: '🎨 Preparing to generate images...',
+              progress: {
+                current: 0,
+                total: llmResult.translatedMenu.length,
+                percentage: 0
+              }
+            });
             
             try {
               console.log(`Generating individual images for ${llmResult.translatedMenu.length} menu items...`);
@@ -74,6 +103,17 @@ export class MenuProcessor {
                   const globalIndex = i + batchIndex;
                   try {
                     console.log(`Generating image ${globalIndex + 1}/${llmResult.translatedMenu.length} for: ${menuItem.name}`);
+                    
+                    // Sub-step progress for individual items
+                    websocketService.emitImageGenerationProgress(socketId, {
+                      step: 'generating_image',
+                      message: `✨ Generating image for ${menuItem.name}...`,
+                      progress: {
+                        current: processedCount,
+                        total: llmResult.translatedMenu.length,
+                        percentage: Math.round((processedCount / llmResult.translatedMenu.length) * 100)
+                      }
+                    });
                     
                     const itemImageResult = await imageGenService.generateWithFallback(menuItem);
                     processedCount++;

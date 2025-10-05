@@ -152,9 +152,25 @@ export class ImageGenService {
         processingTime,
       };
     } catch (error) {
-      console.error(`Failed to generate image for ${menuItem.name}:`, error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error(`Failed to generate image for ${menuItem.name}:`, {
+        error: errorMessage,
+        prompt: this.generateFoodPrompt(menuItem),
+        itemName: menuItem.name,
+        description: menuItem.description
+      });
+      
+      // Check for specific DALL-E error types
+      if (errorMessage.includes('content_policy_violation')) {
+        console.warn(`Content policy violation for "${menuItem.name}". This item may contain words that trigger DALL-E's content filter.`);
+      } else if (errorMessage.includes('rate_limit')) {
+        console.warn(`Rate limit exceeded. Too many DALL-E requests.`);
+      } else if (errorMessage.includes('timeout')) {
+        console.warn(`Request timeout for "${menuItem.name}". DALL-E API is slow to respond.`);
+      }
+      
       throw new Error(
-        `Image generation failed for ${menuItem.name}: ${error instanceof Error ? error.message : 'Unknown error'}`
+        `Image generation failed for ${menuItem.name}: ${errorMessage}`
       );
     }
   }
@@ -209,9 +225,16 @@ export class ImageGenService {
   }
 
   private getFallbackImageUrl(menuItem: MenuItem): string {
-    // Generate a placeholder image URL with the item name
+    // First try to get a semantic fallback image from the cache service
+    const semanticFallback = imageCacheService.getFallbackImage(menuItem.name);
+    if (semanticFallback) {
+      console.log(`Using semantic fallback image for: ${menuItem.name}`);
+      return semanticFallback;
+    }
+    
+    // If no semantic match, use a placeholder with better styling
     const encodedName = encodeURIComponent(menuItem.name);
-    return `https://via.placeholder.com/400x400/f0f0f0/333333?text=${encodedName}`;
+    return `https://via.placeholder.com/400x400/667eea/ffffff?text=${encodedName}`;
   }
 
   async generateWithFallback(

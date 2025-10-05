@@ -5,20 +5,37 @@ export interface WebSocketEvents {
   join_room: (socketId: string) => void;
   
   // Server to Client
+  // OCR Events
   ocr_started: () => void;
+  ocr_progress: (data: SubStepProgressData) => void;
   ocr_complete: (data: OCRCompleteData) => void;
   ocr_error: (data: ErrorData) => void;
   
+  // Translation Events
   translation_started: () => void;
+  translation_progress: (data: SubStepProgressData) => void;
   translation_complete: (data: TranslationCompleteData) => void;
   translation_error: (data: ErrorData) => void;
   
+  // Image Generation Events
   image_generation_started: () => void;
+  image_generation_progress: (data: SubStepProgressData) => void;
   image_generated: (data: ImageGeneratedData) => void;
   image_generation_error: (data: ErrorData) => void;
   
+  // Overall Processing Events
   processing_complete: (data: ProcessingCompleteData) => void;
   processing_error: (data: ErrorData) => void;
+}
+
+export interface SubStepProgressData {
+  step: string;
+  message: string;
+  progress?: {
+    current: number;
+    total: number;
+    percentage: number;
+  };
 }
 
 export interface OCRCompleteData {
