@@ -299,7 +299,7 @@ IMPORTANT:
     // Last resort: try to extract the essential information manually
     console.log('Attempting manual JSON reconstruction...');
 
-    const result = {
+    const result: { sourceLanguage: string; items: MenuItem[] } = {
       sourceLanguage: 'English',
       items: [],
     };
