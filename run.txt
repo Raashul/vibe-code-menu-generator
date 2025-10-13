@@ -1,8 +1,0 @@
-## Run Frontend
-cd frontend
-npm run dev
-
-## Run Backend
-cd backend
-docker compose up
-npm run dev

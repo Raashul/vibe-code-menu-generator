@@ -16,6 +16,25 @@ Basically you snap a pic of a menu or upload a manu, the it generates a sample f
 
 Built this mostly to avoid ordering mystery dishes when traveling, but it turned into a nice little tech playground.
 
+## Demo
+
+### Home Page
+
+![Demo Step 1](./demo-images/image1.png)
+
+### Image uploaded, OCR + image generation begins
+
+![Demo Step 2](demo-images/image2.png)
+
+### Image generation responses start coming in
+
+![Demo Step 3](demo-images/image3.png)
+
+
+### Image generation complete
+
+![Demo Step 4](demo-images/image4.png)
+
 ## Tech Stack (aka what I threw together)
 
 **Frontend:**
